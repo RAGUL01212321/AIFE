@@ -1,0 +1,409 @@
+#!/usr/bin/env python3
+"""
+AIFE Project Structure and File Guide
+
+This file documents all project files and their purposes.
+"""
+
+PROJECT_STRUCTURE = """
+AIFE - Advanced Interactive File Explorer
+==========================================
+
+Project Root: /home/ragul/Desktop/AIFE/
+
+├── main.py
+│   ├── Purpose: Entry point for the application
+│   ├── Size: ~20 lines
+│   ├── Key Content: Imports and runs GUI
+│   └── Run: python3 main.py
+│
+├── requirements.txt
+│   ├── Purpose: Python package dependencies
+│   ├── Key Content: PyQt5>=5.15.0
+│   └── Install: pip3 install -r requirements.txt
+│
+├── test_aife.py
+│   ├── Purpose: Automated test suite
+│   ├── Size: ~400 lines
+│   ├── Key Tests:
+│   │   - Directory listing
+│   │   - File operations
+│   │   - Permission checking
+│   │   - Error handling
+│   │   - Inode information
+│   └── Run: python3 test_aife.py
+│
+├── README.md
+│   ├── Purpose: Project overview and quick start
+│   ├── Sections:
+│   │   - Quick start
+│   │   - Features
+│   │   - Architecture diagram
+│   │   - Installation steps
+│   │   - Usage guide
+│   │   - Testing scenarios
+│   │   - OS concepts overview
+│   │   - Troubleshooting
+│   └── Read: Open in text editor or markdown viewer
+│
+├── src/ (Source Code)
+│   │
+│   ├── filesystem.py
+│   │   ├── Purpose: VFS abstraction & system call wrappers
+│   │   ├── Size: ~450 lines
+│   │   ├── Key Classes:
+│   │   │   - FileNode: Inode-like data structure
+│   │   │   - FileSystemAbstraction: VFS layer
+│   │   ├── Key Methods:
+│   │   │   - list_directory(): Use os.listdir + os.stat
+│   │   │   - get_file_info(): Extract inode metadata
+│   │   │   - delete_file(): Use os.remove (unlink)
+│   │   │   - rename_file(): Use os.rename
+│   │   │   - can_read/write/execute(): Use os.access
+│   │   └── OS Concepts Demonstrated:
+│   │       - System calls (stat, readdir, unlink, rename, access)
+│   │       - VFS abstraction
+│   │       - Inode structure
+│   │       - File permissions
+│   │       - Path resolution
+│   │
+│   ├── file_manager.py
+│   │   ├── Purpose: Business logic & error handling
+│   │   ├── Size: ~350 lines
+│   │   ├── Key Classes:
+│   │   │   - FileOperationType: Enum of operations
+│   │   │   - OperationResult: Operation outcome
+│   │   │   - FileManager: Coordinates operations
+│   │   ├── Key Methods:
+│   │   │   - browse_directory(): Navigate folders
+│   │   │   - delete_file(): Delete with confirmation
+│   │   │   - rename_file(): Rename with validation
+│   │   │   - open_file(): Open with default app
+│   │   │   - get_file_info(): Retrieve metadata
+│   │   └── OS Concepts Demonstrated:
+│   │       - Error handling (errno mapping)
+│   │       - Permission validation
+│   │       - User-friendly error messages
+│   │
+│   └── gui.py
+│       ├── Purpose: PyQt5 user interface
+│       ├── Size: ~400 lines
+│       ├── Key Classes:
+│       │   - SignalEmitter: Qt signals for operations
+│       │   - FileExplorerWindow: Main application window
+│       ├── Key UI Components:
+│       │   - Navigation toolbar (back, forward, up, home)
+│       │   - Location bar (show/navigate current path)
+│       │   - Quick access sidebar (home, documents, etc.)
+│       │   - File list table (files with metadata)
+│       │   - Details panel (file properties)
+│       │   - Context menus (right-click operations)
+│       └── OS Concepts Demonstrated:
+│           - User interface to OS abstraction
+│           - Event-driven programming
+│           - Error display to user
+│
+└── docs/ (Documentation)
+    │
+    ├── ARCHITECTURE.md
+    │   ├── Purpose: Design and architecture details
+    │   ├── Sections:
+    │   │   - Project overview
+    │   │   - Architecture diagram (5 layers)
+    │   │   - Layer responsibilities
+    │   │   - OS concepts map
+    │   │   - Component breakdown
+    │   │   - Data flow examples
+    │   │   - Permission model
+    │   │   - Error handling strategy
+    │   │   - Design decisions
+    │   │   - OS concepts checklist
+    │   └── Key Diagrams:
+    │       - Component hierarchy (5 layers)
+    │       - File permission model
+    │       - Directory browse flow
+    │       - File delete flow
+    │
+    ├── SETUP.md
+    │   ├── Purpose: Installation, setup, and testing guide
+    │   ├── Sections:
+    │   │   - Prerequisites
+    │   │   - Step-by-step installation
+    │   │   - Multiple ways to run
+    │   │   - Features implemented
+    │   │   - OS concepts in code
+    │   │   - Testing the application (8 test scenarios)
+    │   │   - Understanding the code
+    │   │   - Troubleshooting
+    │   │   - Viva/demo script
+    │   │   - Submission checklist
+    │   └── Code Examples:
+    │       - Where to find system calls
+    │       - Where to find permission checks
+    │       - Where to find VFS abstraction
+    │
+    ├── OS_CONCEPTS.md
+    │   ├── Purpose: Deep dive into OS concepts
+    │   ├── Sections:
+    │   │   1. User Space vs Kernel Space (with AIFE examples)
+    │   │   2. Virtual File System (VFS) (with code)
+    │   │   3. System Calls (stat, readdir, unlink, rename, access)
+    │   │   4. File Permissions & Access Control
+    │   │   5. Inodes and File Metadata
+    │   │   6. Error Handling and errno
+    │   ├── For Each Concept:
+    │   │   - Concept explanation
+    │   │   - AIFE implementation
+    │   │   - Code examples with line numbers
+    │   │   - Live demo scenarios
+    │   │   - Viva explanation
+    │   └── Additional:
+    │       - Summary table
+    │       - Interview Q&A (10 questions)
+    │       - Further reading references
+    │
+    ├── VIVA_GUIDE.md
+    │   ├── Purpose: Complete viva preparation
+    │   ├── Sections:
+    │   │   - Pre-viva checklist
+    │   │   - Opening statement
+    │   │   - Component explanations (with code)
+    │   │   - OS concepts deep explanations
+    │   │   - Expected viva questions & answers (10 Q&A)
+    │   │   - Viva presentation flow (timing)
+    │   │   - Quick reference card (printable)
+    │   │   - Final tips
+    │   │   - Post-viva checklist
+    │   └── Covers:
+    │       - All major concepts
+    │       - All major components
+    │       - Expected questions
+    │       - Demo scenarios
+    │       - Code references
+    │
+    └── PROJECT_SUMMARY.md
+        ├── Purpose: Overall project completion summary
+        ├── Sections:
+        │   - What has been delivered
+        │   - How to use the project
+        │   - Architecture at a glance
+        │   - Key code locations
+        │   - Submission checklist
+        │   - What examiners look for
+        │   - Expected viva questions
+        │   - File statistics
+        │   - Troubleshooting
+        │   - Post-submission enhancements
+        │   - Success criteria checklist
+        └── Details:
+            - Complete status of all features
+            - Quick reference to code locations
+            - Viva preparation checklist
+            - Project statistics
+
+
+FILE PURPOSES AT A GLANCE
+=========================
+
+EXECUTION:
+  main.py              → Run to start application
+  test_aife.py         → Run to test OS concepts
+
+DEPENDENCIES:
+  requirements.txt     → Install with: pip3 install -r requirements.txt
+
+SOURCE CODE (3 files, ~1200 lines):
+  src/filesystem.py    → OS abstraction layer (system calls, VFS)
+  src/file_manager.py  → Business logic layer (operations, errors)
+  src/gui.py           → User interface layer (PyQt5)
+
+DOCUMENTATION (6 files, ~3000 lines):
+  README.md            → Start here for overview
+  docs/ARCHITECTURE.md → Design and component details
+  docs/SETUP.md        → Installation and testing
+  docs/OS_CONCEPTS.md  → Deep dive into OS theory
+  docs/VIVA_GUIDE.md   → Complete viva preparation
+  docs/PROJECT_SUMMARY → This summary
+
+TOTAL PROJECT: ~4000 lines of code and documentation
+
+
+WHAT'S IN EACH SOURCE FILE
+==========================
+
+src/filesystem.py (VFS Abstraction Layer)
+──────────────────────────────────────────
+Lines  1-50:   Imports and docstring
+Lines 35-76:   FileNode class (inode representation)
+Lines 87-120:  FileSystemAbstraction class docstring
+Lines 125-200: Directory listing and metadata extraction
+Lines 210-320: File operation methods
+Lines 334-380: Permission checking methods
+Lines 385-430: Path management methods
+
+Key System Calls:
+  Line 178: os.stat(path) → stat() syscall
+  Line 166: os.listdir(path) → getdents64() syscall
+  Line 269: os.remove(path) → unlink() syscall
+  Line 277: os.rename() → rename() syscall
+  Line 340: os.access() → access() syscall
+
+src/file_manager.py (Business Logic Layer)
+───────────────────────────────────────────
+Lines  1-40:   Imports and enums
+Lines 60-120:  browse_directory() with error handling
+Lines 125-160: File operation methods
+Lines 165-200: Rename operation with validation
+Lines 205-250: Delete operation with confirmation
+Lines 255-300: Error result generation
+
+Error Handling:
+  Lines 70-100: Catches FileNotFoundError, PermissionError
+  Lines 155-190: Translates OS errors to user messages
+
+src/gui.py (GUI Layer)
+──────────────────────
+Lines  1-40:   Imports and setup
+Lines 50-80:   Main window initialization
+Lines 95-200:  UI layout creation
+Lines 200-250: File list population
+Lines 250-320: Context menu and operations
+Lines 330-380: Navigation and state management
+
+Key UI Components:
+  Lines 95-115: File list table setup
+  Lines 150-200: Properties dialog
+  Lines 200-240: Context menu with operations
+
+
+READING GUIDE FOR DIFFERENT PURPOSES
+====================================
+
+If you want to... → Read these files in order:
+
+Understand architecture:
+  1. README.md (overview)
+  2. docs/ARCHITECTURE.md (detailed design)
+  3. Look at src/filesystem.py structure
+
+Understand OS concepts:
+  1. docs/OS_CONCEPTS.md (theory with AIFE code)
+  2. Look at relevant code locations referenced
+
+Run the application:
+  1. README.md (quick start section)
+  2. docs/SETUP.md (detailed setup)
+  3. Run: python3 main.py
+
+Prepare for viva:
+  1. docs/VIVA_GUIDE.md (all you need)
+  2. Review: docs/OS_CONCEPTS.md for deep answers
+  3. Practice demo scenarios
+
+Test the system:
+  1. python3 test_aife.py (see test results)
+  2. Follow testing scenarios in docs/SETUP.md
+
+Submit the project:
+  1. Review docs/PROJECT_SUMMARY.md (checklist)
+  2. Package all files in AIFE/
+  3. Create tar.gz or zip archive
+
+
+HOW LONG TO READ EACH FILE
+===========================
+
+main.py:                  < 1 minute (20 lines)
+requirements.txt:         < 1 minute (1 line)
+test_aife.py:             5 minutes (400 lines)
+
+README.md:                10 minutes (overview)
+docs/ARCHITECTURE.md:     20 minutes (design)
+docs/SETUP.md:            15 minutes (setup)
+docs/OS_CONCEPTS.md:      30 minutes (concepts)
+docs/VIVA_GUIDE.md:       20 minutes (viva prep)
+docs/PROJECT_SUMMARY.md:  10 minutes (summary)
+
+src/filesystem.py:        20 minutes (450 lines)
+src/file_manager.py:      15 minutes (350 lines)
+src/gui.py:               15 minutes (400 lines)
+
+TOTAL READING TIME: ~2.5 hours for complete understanding
+
+
+QUICK FILE REFERENCE
+====================
+
+Need to find... → Look in file:
+
+System call examples:        src/filesystem.py (comments "System call:")
+Inode structure:             src/filesystem.py (FileNode class)
+Permission checking:         src/filesystem.py (can_read/write/execute)
+File operations:             src/file_manager.py (delete_file, rename_file)
+Error handling:              src/file_manager.py (exception handling)
+GUI components:              src/gui.py (setup_ui method)
+Architecture diagram:        docs/ARCHITECTURE.md
+VFS explanation:             docs/OS_CONCEPTS.md (Section 2)
+Viva questions:              docs/VIVA_GUIDE.md (Q&A section)
+Testing scenarios:           docs/SETUP.md (Test section)
+Submission checklist:        docs/PROJECT_SUMMARY.md
+
+
+FILE SIZES
+==========
+
+Source Code:
+  src/filesystem.py   ~450 lines
+  src/file_manager.py ~350 lines
+  src/gui.py          ~400 lines
+  test_aife.py        ~400 lines
+  Total:              ~1600 lines
+
+Documentation:
+  README.md           ~300 lines
+  ARCHITECTURE.md     ~500 lines
+  SETUP.md            ~400 lines
+  OS_CONCEPTS.md      ~900 lines
+  VIVA_GUIDE.md       ~700 lines
+  PROJECT_SUMMARY.md  ~400 lines
+  Total:              ~3200 lines
+
+Total Project: ~4800 lines
+
+
+RECOMMENDED READING ORDER
+=========================
+
+1st: README.md (5 min)
+     → Get overview, understand project scope
+
+2nd: docs/PROJECT_SUMMARY.md (10 min)
+     → See what's included, verify completeness
+
+3rd: docs/ARCHITECTURE.md (20 min)
+     → Understand component design
+
+4th: src/filesystem.py (20 min)
+     → See VFS and system calls in action
+
+5th: docs/OS_CONCEPTS.md (30 min)
+     → Understand theory with code examples
+
+6th: src/file_manager.py + src/gui.py (20 min)
+     → See error handling and UI
+
+7th: docs/VIVA_GUIDE.md (20 min)
+     → Prepare for examination
+
+8th: docs/SETUP.md (15 min)
+     → Learn testing and running details
+
+Total: ~2 hours for complete understanding
+
+
+That's it! You have a complete file explorer demonstrating OS concepts.
+Everything is documented, tested, and ready for submission and viva.
+"""
+
+if __name__ == "__main__":
+    print(PROJECT_STRUCTURE)
