@@ -23,11 +23,11 @@ AIFE is entirely a **user space application**:
 ```
 ┌─────────────────────────────────────┐
 │      User Space (AIFE)              │
-│  ┌─────────────────────────────┐   │
-│  │ GUI Layer (PyQt5)           │   │
-│  │ File Manager Layer          │   │
-│  │ File System Abstraction     │   │
-│  └─────────────────────────────┘   │
+│  ┌─────────────────────────────┐    │
+│  │ GUI Layer (PyQt5)           │    │
+│  │ File Manager Layer          │    │
+│  │ File System Abstraction     │    │
+│  └─────────────────────────────┘    │
 └──────────────┬──────────────────────┘
                │ System Calls
 ┌──────────────▼──────────────────────┐
