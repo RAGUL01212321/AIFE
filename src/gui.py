@@ -112,6 +112,7 @@ class FileExplorerWindow(QMainWindow):
         
         # Add chatbot with stretch
         self.chatbot = ChatbotWidget()
+        self.chatbot.search_results_ready.connect(self.on_chatbot_search_results)
         left_layout.addWidget(self.chatbot, 3)
         
         left_widget = QWidget()
@@ -192,6 +193,12 @@ class FileExplorerWindow(QMainWindow):
             self.location_input.setText(path)
             self.populate_file_list(result.data)
             self.populate_quick_access()
+            # Update chatbot context with current directory
+            try:
+                if hasattr(self, 'chatbot') and self.chatbot:
+                    self.chatbot.set_current_directory(path)
+            except Exception:
+                pass
             self.statusBar().showMessage(result.message)
         else:
             QMessageBox.warning(self, "Error", result.message)
@@ -414,6 +421,14 @@ Accessed: {file_node.accessed_time}
             # Only show error for non-list operations
             if result.operation != FileOperationType.LIST:
                 pass  # Error already shown in operation methods
+
+    def on_chatbot_search_results(self, files: List[FileNode]):
+        """Update file list with LLM-selected search results"""
+        if files:
+            self.populate_file_list(files)
+            self.statusBar().showMessage(f"Showing {len(files)} matches from assistant")
+        else:
+            self.statusBar().showMessage("No matches returned by assistant")
 
 
 def main():

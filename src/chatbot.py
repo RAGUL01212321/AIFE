@@ -2,19 +2,24 @@
 AIFE - Advanced Interactive File Explorer
 Chatbot Module
 
-A simple themed chatbot that provides helpful guidance and file system assistance.
+Intelligent chatbot with LLM-powered file system assistance.
+Supports both rule-based and LLM-based responses with file metadata context.
 """
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLineEdit, 
     QPushButton, QLabel, QScrollArea, QDialog, QFormLayout,
-    QSpinBox, QCheckBox, QMessageBox
+    QSpinBox, QCheckBox, QMessageBox, QComboBox
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QObject
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread
 from PyQt5.QtGui import QFont, QColor, QTextCursor
 import random
 import json
 import os
+from typing import Optional, Callable
+
+from filesystem import FileSystemAbstraction
+from llm_chatbot_backend import LLMIntegrationManager, LLMProvider
 
 
 class ChatbotSignals(QObject):
@@ -31,8 +36,11 @@ class ChatbotSettings:
         "api_key": "",
         "model": "gpt-3.5-turbo",
         "temperature": 0.7,
-        "enable_ai": False,
-        "max_history": 20
+        "enable_ai": True,
+        "max_history": 20,
+        "llm_provider": "ollama",
+        "ollama_model": "llama2",
+        "use_llm_backend": True
     }
     
     def __init__(self):
@@ -131,17 +139,34 @@ class ChatbotSettingsDialog(QDialog):
         """Setup settings dialog UI"""
         layout = QFormLayout(self)
         
-        # API Key
+        # Use LLM Backend
+        self.use_llm_checkbox = QCheckBox("Use LLM-powered Backend")
+        self.use_llm_checkbox.setChecked(self.settings.get("use_llm_backend", True))
+        layout.addRow(self.use_llm_checkbox)
+        
+        # LLM Provider selection
+        self.provider_combo = QComboBox()
+        self.provider_combo.addItems(["ollama", "openai", "anthropic", "huggingface"])
+        self.provider_combo.setCurrentText(self.settings.get("llm_provider", "ollama"))
+        layout.addRow("LLM Provider:", self.provider_combo)
+        
+        # Ollama Model
+        self.ollama_model_input = QLineEdit()
+        self.ollama_model_input.setText(self.settings.get("ollama_model", "llama2"))
+        self.ollama_model_input.setPlaceholderText("e.g., llama2, mistral, neural-chat")
+        layout.addRow("Ollama Model:", self.ollama_model_input)
+        
+        # API Key (for cloud providers)
         self.api_key_input = QLineEdit()
-        self.api_key_input.setPlaceholderText("Enter your API key...")
+        self.api_key_input.setPlaceholderText("Enter your API key (optional)...")
         self.api_key_input.setEchoMode(QLineEdit.Password)
         self.api_key_input.setText(self.settings.get("api_key", ""))
-        layout.addRow("OpenAI API Key:", self.api_key_input)
+        layout.addRow("API Key:", self.api_key_input)
         
         # Model selection
         self.model_input = QLineEdit()
         self.model_input.setText(self.settings.get("model", "gpt-3.5-turbo"))
-        layout.addRow("Model:", self.model_input)
+        layout.addRow("Cloud Model:", self.model_input)
         
         # Temperature
         self.temperature_input = QSpinBox()
@@ -150,11 +175,6 @@ class ChatbotSettingsDialog(QDialog):
         self.temperature_input.setValue(int(self.settings.get("temperature", 0.7) * 100))
         self.temperature_input.setSuffix("%")
         layout.addRow("Temperature (Creativity):", self.temperature_input)
-        
-        # Enable AI
-        self.enable_ai_checkbox = QCheckBox("Enable AI responses")
-        self.enable_ai_checkbox.setChecked(self.settings.get("enable_ai", False))
-        layout.addRow(self.enable_ai_checkbox)
         
         # Max history
         self.max_history_input = QSpinBox()
@@ -182,8 +202,10 @@ class ChatbotSettingsDialog(QDialog):
             "api_key": self.api_key_input.text(),
             "model": self.model_input.text(),
             "temperature": self.temperature_input.value() / 100,
-            "enable_ai": self.enable_ai_checkbox.isChecked(),
-            "max_history": self.max_history_input.value()
+            "use_llm_backend": self.use_llm_checkbox.isChecked(),
+            "max_history": self.max_history_input.value(),
+            "llm_provider": self.provider_combo.currentText(),
+            "ollama_model": self.ollama_model_input.text()
         }
         
         if self.settings.save_settings(settings_dict):
@@ -194,14 +216,63 @@ class ChatbotSettingsDialog(QDialog):
 
 
 class ChatbotWidget(QWidget):
-    """ChatBot UI Widget"""
+    """ChatBot UI Widget with LLM Integration"""
     
-    def __init__(self):
+    # Signal to notify parent of current directory
+    current_directory_changed = pyqtSignal(str)
+    # Signal to notify parent of LLM search results
+    search_results_ready = pyqtSignal(list)
+    
+    def __init__(self, fs_abstraction: Optional[FileSystemAbstraction] = None):
         super().__init__()
         self.chatbot = Chatbot()
         self.settings = ChatbotSettings()
         self.signals = ChatbotSignals()
+        self.fs_abstraction = fs_abstraction or FileSystemAbstraction()
+        self.current_directory = self.fs_abstraction.home_dir
+        
+        # Initialize LLM backend if available and enabled
+        self.llm_manager: Optional[LLMIntegrationManager] = None
+        self.use_llm = self.settings.get("use_llm_backend", True)
+        self._init_llm_backend()
+        
         self.setup_ui()
+    
+    def _init_llm_backend(self):
+        """Initialize LLM backend based on settings"""
+        try:
+            if not self.use_llm:
+                return
+            
+            provider_name = self.settings.get("llm_provider", "ollama").lower()
+            provider_map = {
+                "ollama": LLMProvider.OLLAMA,
+                "openai": LLMProvider.OPENAI,
+                "anthropic": LLMProvider.ANTHROPIC,
+                "huggingface": LLMProvider.HUGGINGFACE
+            }
+            
+            provider = provider_map.get(provider_name, LLMProvider.OLLAMA)
+
+            if provider == LLMProvider.OLLAMA:
+                model_name = self.settings.get("ollama_model", "llama2")
+            else:
+                model_name = self.settings.get("model", "gpt-3.5-turbo")
+            
+            self.llm_manager = LLMIntegrationManager(
+                fs_abstraction=self.fs_abstraction,
+                provider=provider,
+                api_key=self.settings.get("api_key"),
+                model_name=model_name
+            )
+        except Exception as e:
+            print(f"Warning: Could not initialize LLM backend: {e}")
+            self.llm_manager = None
+    
+    def set_current_directory(self, directory: str):
+        """Set current directory for file system context"""
+        self.current_directory = directory
+        self.current_directory_changed.emit(directory)
     
     def setup_ui(self):
         """Setup chatbot UI"""
@@ -255,7 +326,7 @@ class ChatbotWidget(QWidget):
         layout.addStretch()
     
     def on_send_message(self):
-        """Handle message send"""
+        """Handle message send with LLM backend if available"""
         user_message = self.input_field.text().strip()
         if not user_message:
             return
@@ -263,9 +334,45 @@ class ChatbotWidget(QWidget):
         # Display user message
         self._append_message("You", user_message)
         
-        # Get and display bot response
-        response = self.chatbot.get_response(user_message)
-        self._append_message("Assistant", response)
+        # Get response based on backend availability
+        if self.llm_manager and self.use_llm:
+            # Use LLM backend with file system context
+            try:
+                response_data = self.llm_manager.process_user_message(
+                    user_message,
+                    self.current_directory
+                )
+                response_text = response_data["response"]
+                
+                # Display response
+                self._append_message("Assistant", response_text)
+
+                # Emit search results to update file list
+                matched_paths = response_data.get("matched_files") or []
+                if matched_paths:
+                    try:
+                        all_files = self.fs_abstraction.list_directory(self.current_directory)
+                        file_map = {f.path: f for f in all_files}
+                        matched_nodes = [file_map[p] for p in matched_paths if p in file_map]
+                        if matched_nodes:
+                            self.search_results_ready.emit(matched_nodes)
+                            self._append_message("System", f"Showing top {len(matched_nodes)} matches in the file list.")
+                    except Exception:
+                        pass
+                
+                # Show suggested actions if any
+                if response_data.get("suggested_actions"):
+                    actions_text = "\n📌 Suggested actions: " + ", ".join(response_data["suggested_actions"])
+                    self._append_message("System", actions_text)
+                
+            except Exception as e:
+                # Fallback to rule-based chatbot
+                response = self.chatbot.get_response(user_message)
+                self._append_message("Assistant", response)
+        else:
+            # Use rule-based chatbot
+            response = self.chatbot.get_response(user_message)
+            self._append_message("Assistant", response)
         
         # Clear input
         self.input_field.clear()
@@ -281,6 +388,9 @@ class ChatbotWidget(QWidget):
         if sender == "You":
             self.chat_display.setTextColor(QColor(0, 100, 200))
             self.chat_display.append(f"You: {message}")
+        elif sender == "System":
+            self.chat_display.setTextColor(QColor(200, 150, 0))
+            self.chat_display.append(message)
         else:
             self.chat_display.setTextColor(QColor(50, 150, 50))
             self.chat_display.append(f"Assistant: {message}")
@@ -291,4 +401,11 @@ class ChatbotWidget(QWidget):
     def show_settings(self):
         """Show settings dialog"""
         dialog = ChatbotSettingsDialog(self.settings, self)
-        dialog.exec_()
+        if dialog.exec_() == QDialog.Accepted:
+            # Reinitialize LLM backend with new settings
+            self.use_llm = self.settings.get("use_llm_backend", True)
+            self._init_llm_backend()
+            
+            # Show confirmation
+            status = "LLM backend enabled" if self.llm_manager else "Using rule-based chatbot"
+            self._append_message("System", f"Settings updated. {status}")
